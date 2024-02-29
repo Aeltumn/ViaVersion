@@ -30,6 +30,7 @@ import com.viaversion.viaversion.api.type.types.version.Types1_20_2;
 import com.viaversion.viaversion.api.type.types.version.Types1_20_3;
 import com.viaversion.viaversion.protocols.protocol1_20_2to1_20.packet.ClientboundConfigurationPackets1_20_2;
 import com.viaversion.viaversion.protocols.protocol1_20_2to1_20.packet.ClientboundPackets1_20_2;
+import com.viaversion.viaversion.protocols.protocol1_20_2to1_20.storage.ConfigurationState;
 import com.viaversion.viaversion.protocols.protocol1_20_3to1_20_2.Protocol1_20_3To1_20_2;
 import com.viaversion.viaversion.protocols.protocol1_20_3to1_20_2.packet.ClientboundPackets1_20_3;
 import com.viaversion.viaversion.rewriter.EntityRewriter;
@@ -72,7 +73,6 @@ public final class EntityPacketRewriter1_20_3 extends EntityRewriter<Clientbound
                 map(Type.STRING); // Dimension key
                 map(Type.STRING); // World
                 handler(worldDataTrackerHandlerByKey());
-                handler(wrapper -> sendChunksSentGameEvent(wrapper));
             }
         });
 
@@ -82,12 +82,21 @@ public final class EntityPacketRewriter1_20_3 extends EntityRewriter<Clientbound
                 map(Type.STRING); // Dimension
                 map(Type.STRING); // World
                 handler(worldDataTrackerHandlerByKey());
+            }
+        });
+
+        // Level chunks load start is always sent after the world border initialisation in sendLevelInfo so we hook
+        // into that to ensure it's sent at the correct time.
+        protocol.registerClientbound(ClientboundPackets1_20_2.WORLD_BORDER_INIT, new PacketHandlers() {
+            @Override
+            public void register() {
                 handler(wrapper -> sendChunksSentGameEvent(wrapper));
             }
         });
     }
 
     private void sendChunksSentGameEvent(final PacketWrapper wrapper) throws Exception {
+        wrapper.passthroughAll();
         wrapper.send(Protocol1_20_3To1_20_2.class);
         wrapper.cancel();
 
